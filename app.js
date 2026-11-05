@@ -1,7 +1,7 @@
 /* Ho-Park app — working demo (no backend; data is stored on this device only). */
 (function () {
   'use strict';
-  var VERSION = '1.1.0-demo';
+  var VERSION = '1.3.0-demo';
   var STORE = 'hp-app-v1';
   var $ = function (s, c) { return (c || document).querySelector(s); };
   // Website links: inside the website package the app lives in /app/, on GitHub Pages it runs on its own.
@@ -16,6 +16,23 @@
      Texts (English / Polish)
      ===================================================================== */
   var T = {
+    occ: ['Occupancy', 'Obłożenie'],
+    theme: ['Colour theme', 'Motyw kolorów'], themeD: ['Saved on this phone. Switch any time.', 'Zapisany na tym telefonie. Zmienisz w każdej chwili.'],
+    thEmerald: ['Emerald & White', 'Szmaragd i biel'], thEmeraldD: ['Bright and clear · best in daylight', 'Jasny i czytelny · najlepszy w dzień'],
+    thBlackgold: ['Black & Gold', 'Czerń i złoto'], thBlackgoldD: ['Premium dark · easy on the eyes at night', 'Ciemny premium · wygodny nocą'],
+    thEmgold: ['Emerald Night', 'Szmaragdowa noc'], thEmgoldD: ['Dark emerald with gold accents', 'Ciemny szmaragd ze złotymi akcentami'],
+    themeSet: ['Theme changed', 'Zmieniono motyw'], themeBar: ['Tip: reopen the home-screen app once so the iPhone status bar matches the new theme.', 'Wskazówka: uruchom aplikację z ekranu głównego ponownie, aby pasek statusu iPhone’a dopasował się do motywu.'],
+    simLink: ['Simulate earnings in another city', 'Symuluj zarobki w innym mieście'],
+    acPriv: ['Private', 'Prywatne'], acComp: ['Company', 'Firma'], acMine: ['Mine', 'Moje'],
+    demoBadge: ['Demo data · no login', 'Dane demo · bez logowania'], afterFee: ['after 15% fee', 'po prowizji 15%'],
+    allCountries: ['All countries', 'Wszystkie kraje'], allSpaces: ['All spaces', 'Wszystkie miejsca'], avgDay: ['avg/day', 'śr./dzień'],
+    avgPer: ['avg {x} h per booking', 'śr. {x} h na rezerwację'], bestSp: ['Best spaces this month', 'Najlepsze miejsca w tym miesiącu'],
+    bkMonth: ['bookings this month', 'rezerwacji w tym miesiącu'], bkShort: ['bookings', 'rezerwacji'], earnS: ['Earned', 'Zarobek'],
+    hello: ['Good to see you, {n}', 'Dobrze Cię widzieć, {n}'], hoursS: ['Hours', 'Godziny'], lgBk: ['bookings', 'rezerwacje'], lgEarn: ['net €/day', 'netto €/dzień'],
+    netL: ['Net payout', 'Wypłata netto'], noMatch: ['No spaces match.', 'Brak pasujących miejsc.'], occSub: ['of shared hours', 'udostępnionych godzin'],
+    paused: ['Paused', 'Wstrzymane'], perSpace: ['Rating per space', 'Ocena wg miejsca'], recentBk: ['Recent bookings', 'Ostatnie rezerwacje'],
+    searchSp: ['Search spaces…', 'Szukaj miejsc…'], spacesL: ['spaces', 'miejsc'], idPrice: ['Move closer to the suggested price', 'Zbliż cenę do sugerowanej'],
+    s247: ['24/7', '24/7'], sWkev: ['Weekdays + evenings', 'Dni robocze + wieczory'], sWk: ['Weekdays 8–18', 'Dni robocze 8–18'],
     tagline: ['Smart Parking. Smarter Cities.', 'Inteligentne parkowanie. Mądrzejsze miasta.'],
     sl1: ['Find space.<br>Share space.<br><em>Better cities.</em>', 'Znajdź miejsce.<br>Udostępnij miejsce.<br><em>Lepsze miasta.</em>'],
     sl2: ['Navigate straight<br>to a <em>free space.</em>', 'Jedź prosto<br>na <em>wolne miejsce.</em>'],
@@ -183,13 +200,25 @@
   };
   /* Embed mode: the website shows live app screens in phone frames (app/?embed=host|explore|tiers|price|profile&lang=pl).
      It uses its own demo data and never touches the visitor's saved app data. */
+  /* Colour themes: chosen in Settings (or ?theme=), stored on this phone */
+  var THEMES = { emerald: { c: '#0c5a46', bar: 'default', sw: ['#ffffff', '#0c5a46', '#5fe0b4'] }, blackgold: { c: '#0b0b0c', bar: 'black-translucent', sw: ['#0b0b0c', '#d4af37', '#f5efe2'] }, emgold: { c: '#05281f', bar: 'black-translucent', sw: ['#05281f', '#d9b45a', '#7fe3bd'] } };
+  var THEME = (location.search.match(/[?&]theme=(\w+)/) || [])[1] || null;
+  if (!THEME && !/[?&]embed=/.test(location.search)) { try { THEME = localStorage.getItem('hp-theme'); } catch (e) {} }
+  function applyTheme(th, store) {
+    if (!THEMES[th]) th = 'emerald'; THEME = th;
+    document.documentElement.dataset.theme = th;
+    var m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute('content', THEMES[th].c);
+    var b = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]'); if (b) b.setAttribute('content', THEMES[th].bar);
+    if (store) { try { localStorage.setItem('hp-theme', th); } catch (e) {} }
+  }
+  applyTheme(THEME);
   var EMBED = (location.search.match(/[?&]embed=(\w+)/) || [])[1] || null;
   var EMBED_LANG = (location.search.match(/[?&]lang=(en|pl)/) || [])[1];
   var S = EMBED ? seedEmbed() : load();
   function seedEmbed() {
     var d = clone(DEFAULT);
     d.lang = EMBED_LANG || d.lang; d.user = { name: 'Tomasz Nowak', email: 'tomasz@example.com' }; d.role = 'both'; d.verified = true;
-    d.spaces = demoSpaces().slice(0, 1);
+    d.spaces = []; d.ownAcct = 'private';
     d.draft = { type: 'under', address: 'ul. Kościuszki 10, Rzeszów', bay: '14', photo: null, tier: 'pro', instr: '', now: true, sched: [1, 1, 1, 1, 1, 3, 3], prices: [2.5, 1.0, 2.2] };
     return d;
   }
@@ -221,7 +250,7 @@
   function hm(ts) { var d = new Date(ts); return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
   function dateStr(ts) { return new Date(ts).toLocaleDateString(S.lang === 'pl' ? 'pl-PL' : 'en-GB', { weekday: 'short', day: 'numeric', month: 'short' }); }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-  function spot(id) { if (id && id.indexOf('my-') === 0) return mySpots().filter(function (s) { return s.id === id; })[0] || asSpot(ownSpace(id.slice(3)), 0); return SPOTS.filter(function (s) { return s.id === id; })[0]; }
+  function spot(id) { if (id && id.indexOf('my-') === 0) return mySpots().filter(function (s) { return s.id === id; })[0] || asSpot(findSpace(id.slice(3)), 0); return SPOTS.filter(function (s) { return s.id === id; })[0]; }
   var MYPOS = [[45, 57], [33, 80], [72, 28], [84, 46], [24, 50]];
   function ownSpace(id) { return S.spaces.filter(function (x) { return x.id === id; })[0]; }
   function asSpot(h, i) {
@@ -549,11 +578,11 @@
   VIEWS.host = function (sub, step) {
     if (sub === 'new') return hostWizard(+step || 1);
     if (sub === 'device') return devicePair(step);
-    if (sub === 'space' && ownSpace(step)) return spaceDetail(step);
-    if (!S.spaces.length) return hostLanding();
+    if (sub === 'space' && findSpace(step)) return spaceDetail(step);
+    if (sub === 'start') return hostLanding();
     return ownerDash();
   };
-  VIEWS.host.after = function (sub, step) { if (sub === 'new') wizAfter(+step || 1); if (!sub && !S.spaces.length) simAfter(); if (!sub && S.spaces.length) ownerAfter(); };
+  VIEWS.host.after = function (sub, step) { if (sub === 'new') wizAfter(+step || 1); if (sub === 'start') simAfter(); if (!sub) ownerAfter(); };
   function hostLanding() {
     var hl = function (icn, a, b) { return '<div class="hl-item"><span class="ic-round">' + ic(icn) + '</span><div><b>' + t(a) + '</b><small>' + t(b) + '</small></div></div>'; };
     return '<section class="screen fade-in"><div class="host-hero">' + houseArt() + '<span class="earn-pill">' + ic('wallet') + t('earnPill') + '</span></div><div class="pad">' +
@@ -654,11 +683,41 @@
     if (n === 5) { var a = $('#dAgree'); a.addEventListener('change', function () { $('#pubBtn').disabled = !a.checked; }); }
   }
   /* =====================================================================
-     Owner dashboard — several spaces, earnings, payout calendar (★ on the 30th),
-     ratings with replies, opportunities. Bookings are simulated demo data.
+     Owner dashboard — mirrors the web Owner Dashboard (dashboard.html):
+     demo accounts Private (2 spaces) / Company (7 spaces) with the same generated figures,
+     plus "Mine" for spaces the user adds in the app. All bookings are simulated demo data.
      ===================================================================== */
   var SHARE = 0.85;
-  var OWN = { tab: 'ov', y: TODAY.getFullYear(), m: TODAY.getMonth(), stars: 0, replying: null };
+  var OWN = { tab: 'ov', y: TODAY.getFullYear(), m: TODAY.getMonth(), stars: 0, space: '', replying: null, spf: 'all', q: '', mxc: '' };
+  var WTYPE = ['under', 'garage', 'drive', 'company', 'outdoor'];
+  var DEMO = {
+    private: { owner: 'Anna Kowalska', iban: 'PL •• 4471', spaces: [
+      { id: 'a1', name: ['Garage · bay 14', 'Garaż · miejsce 14'], addr: 'ul. Kościuszki 10', city: 'rzeszow', loc: 'c', type: 0, tier: 'pro', price: 1.2, sched: 'wkev', demand: .8, on: true },
+      { id: 'a2', name: ['Driveway at home', 'Podjazd przy domu'], addr: 'ul. Słowackiego 8', city: 'rzeszow', loc: 'i', type: 2, tier: 'basic', price: 0.7, sched: 'wk', demand: .55, on: true }
+    ] },
+    company: { owner: 'Tech Hub Sp. z o.o.', iban: 'PL •• 9032', spaces: [
+      { id: 'c1', name: ['Office car park · bay 1', 'Parking biurowy · miejsce 1'], addr: 'al. Piłsudskiego 34', city: 'rzeszow', loc: 'c', type: 3, tier: 'connect', price: 0.9, sched: 'wkev', demand: .75, on: true },
+      { id: 'c2', name: ['Office car park · bay 2', 'Parking biurowy · miejsce 2'], addr: 'al. Piłsudskiego 34', city: 'rzeszow', loc: 'c', type: 3, tier: 'connect', price: 0.9, sched: 'wkev', demand: .7, on: true },
+      { id: 'c3', name: ['Office car park · bay 3', 'Parking biurowy · miejsce 3'], addr: 'al. Piłsudskiego 34', city: 'rzeszow', loc: 'c', type: 3, tier: 'connect', price: 0.9, sched: 'wk', demand: .6, on: false },
+      { id: 'c4', name: ['Kraków office · garage B2', 'Biuro Kraków · garaż B2'], addr: 'ul. Lubicz 23', city: 'krakow', loc: 'c', type: 0, tier: 'pro', price: 2.4, sched: 'all', demand: .85, on: true },
+      { id: 'c5', name: ['Kraków office · outdoor', 'Biuro Kraków · na zewnątrz'], addr: 'ul. Lubicz 23', city: 'krakow', loc: 'i', type: 4, tier: 'basic', price: 1.1, sched: 'wk', demand: .6, on: true },
+      { id: 'c6', name: ['Warsaw hub · level -1', 'Hub Warszawa · poziom -1'], addr: 'ul. Prosta 51', city: 'warsaw', loc: 'i', type: 0, tier: 'pro', price: 1.3, sched: 'all', demand: .8, on: true },
+      { id: 'c7', name: ['Warsaw hub · visitor bay', 'Hub Warszawa · miejsce gościnne'], addr: 'ul. Prosta 51', city: 'warsaw', loc: 'i', type: 4, tier: 'connect', price: 0.8, sched: 'wk', demand: .5, on: true }
+    ] }
+  };
+  var SCHED = { wk: [1, 1, 1, 1, 1, 0, 0], wkev: [1, 1, 1, 1, 1, 0, 0], all: [3, 3, 3, 3, 3, 3, 3] };
+  // demo spaces in the app's space format (overrides for on/off and price are kept on this phone)
+  function demoList(acct) {
+    var ov = S.demoOv || {};
+    return DEMO[acct].spaces.map(function (w) {
+      var o = ov[w.id] || {}, p = o.price || w.price;
+      return { id: w.id, web: w, demo: true, type: WTYPE[w.type], address: w.addr, bay: '', city: w.city, loc: w.loc, tier: w.tier, instr: '', sched: SCHED[w.sched], schedKey: w.sched, prices: [p, Math.max(.4, Math.round(p * 5) / 10), Math.max(.4, Math.round(p * 7) / 10)], sharing: o.on != null ? o.on : w.on, paired: w.tier !== 'basic', demand: w.demand };
+    });
+  }
+  function acctKey() { var a = S.ownAcct || 'private'; if (a === 'mine' && !S.spaces.length) a = 'private'; return a; }
+  function ownerSpaces() { var a = acctKey(); return a === 'mine' ? S.spaces : demoList(a); }
+  function ownerInfo() { var a = acctKey(); return a === 'mine' ? { owner: (S.user && S.user.name) || 'Ho-Park', iban: 'PL •• 4471' } : DEMO[a]; }
+  function findSpace(id) { var all = S.spaces.concat(demoList('private'), demoList('company')); return all.filter(function (x) { return x.id === id; })[0]; }
   function rng(seed) {
     var h = 2166136261; for (var i = 0; i < seed.length; i++) { h ^= seed.charCodeAt(i); h = Math.imul(h, 16777619); }
     var a = h >>> 0;
@@ -666,113 +725,152 @@
   }
   function daysIn(y, m) { return new Date(y, m + 1, 0).getDate(); }
   function payDay(y, m) { return Math.min(30, daysIn(y, m)); }
-  // hours a space is shared on a given weekday (from its weekly schedule presets)
-  function sharedH(h, wd) { var p = PRESETS[h.sched[(wd + 6) % 7]]; return Math.max(0, p.b - p.a); }
+  function schedKey(h) { if (h.schedKey) return h.schedKey; var s = h.sched || []; if (s.every(function (x) { return x === 3; })) return 'all'; if (s.slice(0, 5).some(function (x) { return x === 2 || x === 3; })) return 'wkev'; return 'wk'; }
+  function sharedH(h, wd) { var k = schedKey(h), we = wd === 0 || wd === 6; if (we && k !== 'all') return 0; return k === 'all' ? 24 : k === 'wkev' ? 14 : 10; }
+  // same generator as the web dashboard, so both show identical figures
   function dayData(h, y, m, d) {
     var date = new Date(y, m, d, 12); if (date > TODAY) return null;
-    var wd = date.getDay(), avail = sharedH(h, wd);
-    if (!avail) return { n: 0, h: 0, g: 0 };
-    var c = cityOf(h.city), dem = (h.demand || .7) * (D ? D.model.demand[c.st] * D.model.loc[h.loc || 'c'] : .8);
-    var r = rng(h.id + y + '-' + m + '-' + d), lam = dem * Math.min(avail, 14) / 6.5, n = 0, p = Math.exp(-lam), cum = p, u = r();
-    while (u > cum && n < 9) { n++; p *= lam / n; cum += p; }
-    var hrs = 0; for (var i = 0; i < n; i++) hrs += 1 + Math.round(r() * 7) / 2;
-    hrs = Math.min(hrs, avail);
-    var price = (wd === 0 || wd === 6) ? h.prices[2] : (PRESETS[h.sched[(wd + 6) % 7]].a >= 18 ? h.prices[1] : h.prices[0]);
-    return { n: n, h: hrs, g: hrs * price };
+    var k = schedKey(h), r = rng(h.id + y + '-' + m + '-' + d), wd = date.getDay(), we = wd === 0 || wd === 6;
+    if (we && k !== 'all') return { n: 0, h: 0, g: 0 };
+    var lam = (h.demand || .7) * (we ? 1.2 : k === 'wk' ? 2.2 : 3.0), n = 0, p = Math.exp(-lam), cum = p, u = r();
+    while (u > cum && n < 7) { n++; p *= lam / n; cum += p; }
+    var hrs = 0; for (var i = 0; i < n; i++) hrs += 1 + Math.round(r() * 8) / 2;
+    return { n: n, h: hrs, g: hrs * h.prices[0] };
   }
   function sum(list, y, m, from, to) {
     var tot = { n: 0, h: 0, g: 0, days: [] };
     for (var d = 1; d <= daysIn(y, m); d++) {
       var x = null;
-      if (d >= (from || 1) && d <= (to || 31)) list.forEach(function (h) { var q = dayData(h, y, m, d); if (q) { x = x || { n: 0, h: 0, g: 0 }; x.n += q.n; x.h += q.h; x.g += q.g; } });
+      if (d >= (from || 1) && d <= (to == null ? 31 : to)) list.forEach(function (h) { var q = dayData(h, y, m, d); if (q) { x = x || { n: 0, h: 0, g: 0 }; x.n += q.n; x.h += q.h; x.g += q.g; } });
       tot.days.push(x); if (x) { tot.n += x.n; tot.h += x.h; tot.g += x.g; }
     }
     tot.net = tot.g * SHARE; return tot;
   }
-  function period(y, m) { // previous payout day + 1 .. this payout day
-    var pm = m ? m - 1 : 11, py = m ? y : y - 1, a = sum(S.spaces, py, pm, payDay(py, pm) + 1, 31), b = sum(S.spaces, y, m, 1, payDay(y, m));
+  function period(y, m, list) {
+    list = list || ownerSpaces();
+    var pm = m ? m - 1 : 11, py = m ? y : y - 1, a = sum(list, py, pm, payDay(py, pm) + 1, 31), b = sum(list, y, m, 1, payDay(y, m));
     return { n: a.n + b.n, g: a.g + b.g, net: (a.g + b.g) * SHARE, start: new Date(py, pm, payDay(py, pm) + 1), end: new Date(y, m, payDay(y, m)) };
   }
-  var NAMES = ['Marek W.', 'Katarzyna P.', 'Jan K.', 'Ola S.', 'Piotr Z.', 'Ewa M.', 'Tomasz R.', 'Agnieszka L.', 'Michał D.', 'Zofia B.', 'Paweł G.', 'Natalia C.', 'Lukas H.', 'Eszter N.'];
+  var NAMES = ['Marek W.', 'Katarzyna P.', 'Jan K.', 'Ola S.', 'Piotr Z.', 'Ewa M.', 'Tomasz R.', 'Agnieszka L.', 'Michał D.', 'Zofia B.', 'Paweł G.', 'Natalia C.', 'Łukasz H.', 'Magda T.'];
   var REV = {
-    5: [['Easy to find, the gate opened straight away.', 'Łatwo trafić, brama otworzyła się od razu.'], ['Clean, safe and exactly where the app said. Will book again.', 'Czysto, bezpiecznie i dokładnie tam, gdzie wskazała aplikacja. Zarezerwuję ponownie.'], ['Great price for the centre and no circling the block.', 'Świetna cena jak na centrum i bez krążenia wokół kwartału.']],
-    4: [['Good spot, slightly tight for an SUV.', 'Dobre miejsce, trochę ciasne dla SUV-a.'], ['All good, the entrance sign could be clearer.', 'Wszystko OK, oznaczenie wjazdu mogłoby być wyraźniejsze.']],
-    3: [['Okay, but the access instructions were not very clear.', 'W porządku, ale instrukcja dojazdu nie była zbyt jasna.']],
+    5: [['Easy to find, the gate opened straight away. Perfect for my meeting nearby.', 'Łatwo trafić, brama otworzyła się od razu. Idealnie na spotkanie w okolicy.'], ['Clean, safe and exactly where the app said. Will book again.', 'Czysto, bezpiecznie i dokładnie tam, gdzie wskazała aplikacja. Zarezerwuję ponownie.'], ['Great price for the city centre and no circling the block.', 'Świetna cena jak na centrum i bez krążenia wokół kwartału.'], ['The owner replied quickly when I extended my booking. Thanks!', 'Właściciel szybko odpisał, gdy przedłużałem rezerwację. Dziękuję!']],
+    4: [['Good spot, slightly tight for an SUV but fine.', 'Dobre miejsce, trochę ciasne dla SUV-a, ale w porządku.'], ['All good, the entrance sign could be clearer.', 'Wszystko OK, oznaczenie wjazdu mogłoby być wyraźniejsze.'], ['Convenient and quiet. Took a minute to find the bay number.', 'Wygodnie i cicho. Chwilę szukałem numeru miejsca.']],
+    3: [['Okay, but the access instructions were not very clear.', 'W porządku, ale instrukcja dojazdu nie była zbyt jasna.'], ['Fine location, the driveway is a bit narrow.', 'Dobra lokalizacja, podjazd jest trochę wąski.']],
     2: [['The gate needed two tries to open.', 'Brama otworzyła się dopiero za drugim razem.']],
     1: [['Another car was parked in the bay when I arrived.', 'Gdy przyjechałem, na miejscu stał inny samochód.']]
   };
   function reviews(h) {
-    var r = rng('rv' + h.id), n = 4 + Math.floor(r() * 8), out = [];
+    var r = rng('rev' + h.id), n = 6 + Math.floor(r() * 10), out = [];
     for (var i = 0; i < n; i++) {
       var u = r(), st = u < .62 ? 5 : u < .88 ? 4 : u < .96 ? 3 : u < .99 ? 2 : 1, pool = REV[st], when = new Date(TODAY);
-      when.setDate(when.getDate() - 1 - Math.floor(r() * 70));
+      when.setDate(when.getDate() - Math.floor(r() * 75) - 1);
       out.push({ id: h.id + '-' + i, h: h, who: NAMES[Math.floor(r() * NAMES.length)], st: st, txt: pool[Math.floor(r() * pool.length)], date: when });
     }
     return out;
   }
-  function allRev() { var a = []; S.spaces.forEach(function (h) { a = a.concat(reviews(h)); }); return a.sort(function (x, y) { return y.date - x.date; }); }
+  function allRev() { var a = []; ownerSpaces().forEach(function (h) { a = a.concat(reviews(h)); }); return a.sort(function (x, y) { return y.date - x.date; }); }
   function avgSt(l) { return l.length ? l.reduce(function (a, r) { return a + r.st; }, 0) / l.length : 0; }
   function starRow(n) { var s = ''; for (var i = 1; i <= 5; i++) s += '<i class="' + (i <= Math.round(n) ? 'on' : '') + '">★</i>'; return '<span class="st5" aria-label="' + num(n, 1) + ' / 5">' + s + '</span>'; }
-  function spaceName(h) { return t(TYPES[h.type]) + (h.bay ? ' · ' + h.bay : ''); }
+  function spaceName(h) { return h.web ? L(h.web.name) : t(TYPES[h.type]) + (h.bay ? ' · ' + h.bay : ''); }
   function dshort(d) { return d.toLocaleDateString(S.lang === 'pl' ? 'pl-PL' : 'en-GB', { day: 'numeric', month: 'short' }); }
   function monthLbl(y, m) { return new Date(y, m, 1).toLocaleDateString(S.lang === 'pl' ? 'pl-PL' : 'en-GB', { month: 'long', year: 'numeric' }); }
+  function schedLbl(h) { var k = schedKey(h); return t(k === 'all' ? 's247' : k === 'wkev' ? 'sWkev' : 'sWk'); }
+  function tierPill(k) { return '<span class="opill p-' + k + '">' + t({ basic: 'tBasic', connect: 'tConnect', pro: 'tPro' }[k]) + '</span>'; }
+  function onPill(on) { return '<span class="opill ' + (on ? 'p-on' : 'p-off') + '">● ' + t(on ? 'sharing' : 'paused') + '</span>'; }
 
   function ownerDash() {
-    var tabs = [['ov', 'tOv'], ['sp', 'tSp'], ['pay', 'tPay'], ['rate', 'tRate'], ['ops', 'tOps']];
+    var tabs = [['ov', 'tOv'], ['sp', 'tSp'], ['pay', 'tPay'], ['ops', 'tOps'], ['rate', 'tRate']], a = acctKey(), demo = a !== 'mine';
+    var seg = '<div class="oacct"><button class="' + (a === 'private' ? 'on' : '') + '" data-x="oacct" data-v="private">' + t('acPriv') + ' · ' + DEMO.private.spaces.length + '</button><button class="' + (a === 'company' ? 'on' : '') + '" data-x="oacct" data-v="company">' + t('acComp') + ' · ' + DEMO.company.spaces.length + '</button>' +
+      (S.spaces.length ? '<button class="' + (a === 'mine' ? 'on' : '') + '" data-x="oacct" data-v="mine">' + t('acMine') + ' · ' + S.spaces.length + '</button>' : '') + '</div>';
     var body = { ov: ownOverview, sp: ownSpaces, pay: ownPayouts, rate: ownRatings, ops: ownOps }[OWN.tab]();
-    return '<section class="screen fade-in owner"><div class="topbar"><h1>' + t('ownerT') + '</h1><a class="icon-btn" href="#/host/new/1" aria-label="' + t('addSpace') + '">' + ic('plus') + '</a></div>' +
+    return '<section class="screen fade-in owner"><div class="topbar"><div class="grow"><h1>' + t('ownerT') + '</h1>' + (demo ? '<span class="demo-badge">' + t('demoBadge') + '</span>' : '') + '</div><a class="icon-btn" href="#/host/new/1" aria-label="' + t('addSpace') + '">' + ic('plus') + '</a></div>' +
+      '<div class="pad" style="padding-top:0;padding-bottom:10px">' + seg + '</div>' +
       '<div class="otabs">' + tabs.map(function (x) { return '<button class="' + (OWN.tab === x[0] ? 'on' : '') + '" data-x="otab" data-v="' + x[0] + '">' + t(x[1]) + '</button>'; }).join('') + '</div>' +
       '<div class="pad" style="padding-top:8px">' + body + '<p class="small muted demo-note">' + t('simNote') + '</p></div></section>' + tabbar('host');
   }
   function ownerAfter() {
     var a = $('.otabs .on'); if (a && a.scrollIntoView) a.scrollIntoView({ inline: 'center', block: 'nearest' });
     $$('.orep-f').forEach(function (f) { var ta = $('textarea', f); ta.focus(); f.addEventListener('submit', function (e) { e.preventDefault(); if (!ta.value.trim()) return; S.replies[f.dataset.rid] = ta.value.trim(); OWN.replying = null; save(); toast(t('replied')); render(); }); });
+    var q = $('#oq'); if (q) q.addEventListener('input', function () { OWN.q = q.value; var pos = q.selectionStart; render(); var n = $('#oq'); n.focus(); n.setSelectionRange(pos, pos); });
+    var mc = $('#omx'); if (mc) mc.addEventListener('change', function () { OWN.mxc = mc.value; render(); });
+    var rs = $('#ors'); if (rs) rs.addEventListener('change', function () { OWN.space = rs.value; render(); });
+  }
+
+  function chart(days, y, m) {
+    var W = 360, H = 170, pl = 34, pr = 6, pt = 10, pb = 22, n = days.length, ty = TODAY.getFullYear(), tm = TODAY.getMonth(), td = TODAY.getDate();
+    var vals = days.map(function (x) { return x ? x.g * SHARE : 0; }), max = Math.max.apply(null, vals.concat([1]));
+    var step = max > 60 ? 20 : max > 30 ? 10 : max > 12 ? 5 : 2, top = Math.ceil(max / step) * step, bw = (W - pl - pr) / n, s = '<svg class="ochart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + t('dailyE') + '">';
+    for (var v = 0; v <= top; v += step) { var yy = pt + (H - pt - pb) * (1 - v / top); s += '<line class="g" x1="' + pl + '" x2="' + (W - pr) + '" y1="' + yy + '" y2="' + yy + '"/><text x="' + (pl - 4) + '" y="' + (yy + 3) + '" text-anchor="end">' + v + '€</text>'; }
+    var f = vals.filter(function (v, i) { return days[i]; }), avg = f.length ? f.reduce(function (a, b) { return a + b; }, 0) / f.length : 0;
+    vals.forEach(function (v, i) {
+      var h = (H - pt - pb) * v / top, x = pl + i * bw + bw * .18, wd = new Date(y, m, i + 1).getDay();
+      if (days[i]) s += '<rect class="b' + ((wd === 0 || wd === 6) ? ' we' : '') + (y === ty && m === tm && i + 1 === td ? ' td' : '') + '" x="' + x.toFixed(1) + '" y="' + (H - pb - h).toFixed(1) + '" width="' + (bw * .64).toFixed(1) + '" height="' + Math.max(h, v > 0 ? 1.5 : 0).toFixed(1) + '" rx="1.5"/>';
+      if ((i + 1) % 5 === 0 || i === 0) s += '<text x="' + (pl + i * bw + bw / 2).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle">' + (i + 1) + '</text>';
+    });
+    var ay = pt + (H - pt - pb) * (1 - avg / top);
+    return s + '<line class="avg" x1="' + pl + '" x2="' + (W - pr) + '" y1="' + ay.toFixed(1) + '" y2="' + ay.toFixed(1) + '"/><text class="avgt" x="' + (W - pr) + '" y="' + (ay - 4).toFixed(1) + '" text-anchor="end">' + t('avgDay') + ' ' + money(avg) + '</text></svg>';
   }
 
   function ownOverview() {
-    var y = TODAY.getFullYear(), m = TODAY.getMonth(), d = TODAY.getDate(), cur = sum(S.spaces, y, m, 1, d);
-    var pm = m ? m - 1 : 11, py = m ? y : y - 1, prev = sum(S.spaces, py, pm, 1, Math.min(d, daysIn(py, pm)));
-    var ch = prev.net ? Math.round((cur.net / prev.net - 1) * 100) : 0, pd = payDay(y, m), per = period(y, m), left = pd - d;
-    var revs = allRev();
-    var max = Math.max.apply(null, cur.days.map(function (x) { return x ? x.g : 0; }).concat([1]));
-    var bars = cur.days.map(function (x, i) { return '<i class="' + (i + 1 === d ? 'today' : '') + (x ? '' : ' fut') + '" style="height:' + (x ? Math.max(3, x.g / max * 100) : 3) + '%"></i>'; }).join('');
-    var top = S.spaces.map(function (h) { return { h: h, s: sum([h], y, m, 1, d) }; }).sort(function (a, b) { return b.s.net - a.s.net; });
-    return '<div class="okpi">' +
+    var list = ownerSpaces(), info = ownerInfo(), y = TODAY.getFullYear(), m = TODAY.getMonth(), d = TODAY.getDate(), cur = sum(list, y, m, 1, d);
+    var pm = m ? m - 1 : 11, py = m ? y : y - 1, prev = sum(list, py, pm, 1, Math.min(d, daysIn(py, pm)));
+    var ch = prev.net ? Math.round((cur.net / prev.net - 1) * 100) : 0, pd = payDay(y, m), per = period(y, m), left = pd - d, revs = allRev();
+    var shared = 0; list.forEach(function (h) { if (h.sharing) for (var k = 1; k <= d; k++) shared += sharedH(h, new Date(y, m, k).getDay()); });
+    var occ = shared ? Math.min(100, cur.h / shared * 100) : 0;
+    var top = list.map(function (h) { return { h: h, s: sum([h], y, m, 1, d) }; }).sort(function (a, b) { return b.s.net - a.s.net; });
+    var recent = []; list.forEach(function (h) { for (var k = d; k >= Math.max(1, d - 6); k--) { var x = dayData(h, y, m, k); if (x && x.n) recent.push({ h: h, d: k, x: x }); } });
+    recent.sort(function (p, q) { return q.d - p.d || q.x.g - p.x.g; });
+    return '<h2 class="hello">' + t('hello').replace('{n}', esc(acctKey() === 'company' ? info.owner : info.owner.split(' ')[0])) + '</h2><p class="small muted" style="margin:2px 0 12px">' + monthLbl(y, m) + ' · ' + list.length + ' ' + t('spacesL') + '</p>' +
+      '<div class="okpi">' +
       '<div class="ok-hero"><small>' + t('earnedM') + '</small><b>' + money(cur.net) + '</b><span>' + (ch >= 0 ? '▲ ' : '▼ ') + Math.abs(ch) + '% ' + t('vsLast') + '</span></div>' +
-      '<div><small>' + t('timesUsed') + '</small><b>' + cur.n + '</b></div><div><small>' + t('hoursB') + '</small><b>' + num(cur.h) + ' h</b></div>' +
-      '<div><small>' + t('avgRating') + '</small><b>' + num(avgSt(revs), 1) + ' ★</b></div><div><small>' + t('spacesN') + '</small><b>' + S.spaces.filter(function (h) { return h.sharing; }).length + '/' + S.spaces.length + '</b></div></div>' +
-      '<button class="pay-card" data-x="otab" data-v="pay"><span class="pc-star">★</span><span class="grow"><small>' + t('nextPay') + ' · ' + dshort(new Date(y, m, pd)) + '</small><b>' + money(per.net) + '</b></span><em>' + (left <= 0 ? t('payToday') : left === 1 ? t('payTomorrow') : t('payIn').replace('{d}', left)) + '</em></button>' +
-      '<div class="dash-card"><div class="box-h"><b style="flex:1">' + t('dailyE') + '</b><span class="small muted">' + monthLbl(y, m) + '</span></div><div class="mini-bars">' + bars + '</div></div>' +
-      '<h3 class="sec-t">' + t('tSp') + '</h3>' + top.slice(0, 3).map(function (x) { return spaceRow(x.h, x.s); }).join('') +
-      '<h3 class="sec-t">' + t('latestRev') + '</h3>' + revs.slice(0, 2).map(revHtml).join('');
+      '<div><small>' + t('timesUsed') + '</small><b>' + cur.n + '</b><em>' + t('bkMonth') + '</em></div><div><small>' + t('hoursB') + '</small><b>' + num(cur.h) + ' h</b><em>' + t('avgPer').replace('{x}', num(cur.n ? cur.h / cur.n : 0, 1)) + '</em></div>' +
+      '<div><small>' + t('occ') + '</small><b>' + num(occ) + '%</b><em>' + t('occSub') + '</em></div><div><small>' + t('avgRating') + '</small><b>' + num(avgSt(revs), 1) + ' ★</b><em>' + revs.length + ' ' + t('reviews') + '</em></div>' +
+      '<button class="ok-pay" data-x="otab" data-v="pay"><small>' + t('nextPay') + '</small><b>' + money(per.net, 0) + '</b><span>★ ' + dshort(new Date(y, m, pd)) + ' · ' + (left <= 0 ? t('payToday') : left === 1 ? t('payTomorrow') : t('payIn').replace('{d}', left)) + '</span></button></div>' +
+      '<div class="dash-card"><div class="box-h"><b style="flex:1">' + t('dailyE') + '</b><span class="small muted">' + t('afterFee') + '</span></div>' + chart(cur.days, y, m) + '</div>' +
+      '<h3 class="sec-t">' + t('bestSp') + '</h3>' + top.slice(0, 4).map(function (x) { return spaceRow(x.h, x.s); }).join('') +
+      '<h3 class="sec-t">' + t('recentBk') + '</h3><div class="olist">' + recent.slice(0, 6).map(function (r) { return '<div class="orow"><span class="grow"><b>' + esc(spaceName(r.h)) + '</b><small>' + new Date(y, m, r.d).toLocaleDateString(S.lang === 'pl' ? 'pl-PL' : 'en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) + ' · ' + r.x.n + '× · ' + num(r.x.h, 1) + ' h</small></span><b>+' + money(r.x.g * SHARE) + '</b></div>'; }).join('') + '</div>' +
+      '<h3 class="sec-t">' + t('latestRev') + '</h3>' + revs.slice(0, 3).map(revHtml).join('');
   }
   function spaceRow(h, s) {
-    return '<a class="ospace" href="#/host/space/' + h.id + '"><span class="thumb">' + thumb(asSpot(h, 0), 'o' + h.id) + '</span><span class="grow"><b>' + esc(spaceName(h)) + '</b><small>' + esc(cityName(h.city)) + ' · ' + s.n + '× · ' + money(h.prices[0]) + t('perHour') + '</small><span class="st-pill ' + (h.sharing ? 'on' : '') + '">' + t(h.sharing ? 'sharing' : 'notSharing') + '</span></span><span class="r"><b>' + money(s.net) + '</b>' + ic('chev') + '</span></a>';
+    return '<a class="ospace" href="#/host/space/' + h.id + '"><span class="thumb">' + thumb(asSpot(h, 0), 'o' + h.id) + '</span><span class="grow"><b>' + esc(spaceName(h)) + '</b><small>' + esc(cityName(h.city)) + ' · ' + s.n + '× · ' + num(s.h) + ' h</small>' + onPill(h.sharing) + '</span><span class="r"><b>' + money(s.net) + '</b>' + ic('chev') + '</span></a>';
   }
   function ownSpaces() {
-    var y = TODAY.getFullYear(), m = TODAY.getMonth(), d = TODAY.getDate();
-    return '<p class="small muted" style="margin:0 0 10px">' + t('spacesHint') + '</p>' + S.spaces.map(function (h) { return spaceRow(h, sum([h], y, m, 1, d)); }).join('') +
-      '<a class="btn btn-primary" href="#/host/new/1" style="margin-top:14px">' + ic('plus') + t('addSpace') + '</a>';
+    var all = ownerSpaces(), y = TODAY.getFullYear(), m = TODAY.getMonth(), d = TODAY.getDate();
+    var list = all.filter(function (h) { return (OWN.spf === 'all' || (OWN.spf === 'on' ? h.sharing : !h.sharing)) && (!OWN.q || (spaceName(h) + ' ' + h.address + ' ' + cityName(h.city)).toLowerCase().indexOf(OWN.q.toLowerCase()) >= 0); });
+    var chip = function (k, lbl, n) { return '<button class="chip' + (OWN.spf === k ? ' on' : '') + '" data-x="ospf" data-v="' + k + '">' + lbl + ' · ' + n + '</button>'; };
+    return '<div class="chips" style="padding:0;flex-wrap:wrap;margin-bottom:8px">' + chip('all', t('allR'), all.length) + chip('on', t('sharing'), all.filter(function (h) { return h.sharing; }).length) + chip('off', t('paused'), all.filter(function (h) { return !h.sharing; }).length) + '</div>' +
+      '<input class="input" id="oq" type="search" placeholder="' + t('searchSp') + '" value="' + esc(OWN.q) + '" style="margin-bottom:12px">' +
+      (list.length ? list.map(function (h) {
+        var s = sum([h], y, m, 1, d), rv = reviews(h);
+        return '<div class="ocard"><a class="ocard-h" href="#/host/space/' + h.id + '"><span class="thumb">' + thumb(asSpot(h, 0), 'c' + h.id) + '</span><span class="grow"><b>' + esc(spaceName(h)) + '</b><small>' + esc(h.address) + ', ' + esc(cityName(h.city)) + ' · ' + t('loc' + h.loc) + '</small></span><span class="oprice">' + money(h.prices[0]) + '<small>' + t('perHour') + '</small></span></a>' +
+          '<div class="opills">' + onPill(h.sharing) + tierPill(h.tier) + '<span class="opill">' + t(TYPES[h.type]) + '</span><span class="opill">' + schedLbl(h) + '</span></div>' +
+          '<div class="ostats"><div><small>' + t('bookingsN') + '</small><b>' + s.n + '</b></div><div><small>' + t('hoursS') + '</small><b>' + num(s.h) + '</b></div><div><small>' + t('earnS') + '</small><b>' + money(s.net, 0) + '</b></div><div><small>' + t('rating') + '</small><b>' + num(avgSt(rv), 1) + '★</b></div></div>' +
+          '<button class="otgl' + (h.sharing ? ' on' : '') + '" data-x="share" data-v="' + h.id + '"><span class="tgl' + (h.sharing ? ' on' : '') + '"></span>' + t(h.sharing ? 'sharing' : 'paused') + '</button></div>';
+      }).join('') : '<p class="muted">' + t('noMatch') + '</p>') +
+      '<a class="btn btn-primary" href="#/host/new/1" style="margin-top:6px">' + ic('plus') + t('addSpace') + '</a>';
   }
   function ownPayouts() {
-    var y = OWN.y, m = OWN.m, ty = TODAY.getFullYear(), tm = TODAY.getMonth(), td = TODAY.getDate();
-    var isCur = y === ty && m === tm, fut = y > ty || (y === ty && m > tm), mm = sum(S.spaces, y, m, 1, isCur ? td : fut ? 0 : 31), pd = payDay(y, m), per = period(y, m);
+    var list = ownerSpaces(), info = ownerInfo(), y = OWN.y, m = OWN.m, ty = TODAY.getFullYear(), tm = TODAY.getMonth(), td = TODAY.getDate();
+    var isCur = y === ty && m === tm, fut = y > ty || (y === ty && m > tm), mm = sum(list, y, m, 1, isCur ? td : fut ? 0 : 31), pd = payDay(y, m), per = period(y, m, list);
     var dows = S.lang === 'pl' ? ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb', 'Nd'] : ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
     var cells = dows.map(function (x) { return '<span class="cdow">' + x + '</span>'; }).join('');
     for (var i = 0; i < (new Date(y, m, 1).getDay() + 6) % 7; i++) cells += '<span class="cday blank"></span>';
     for (var d = 1; d <= daysIn(y, m); d++) {
-      var x = mm.days[d - 1], pay = d === pd, today = isCur && d === td;
-      cells += '<span class="cday' + (pay ? ' pay' : '') + (today ? ' today' : '') + (x ? '' : ' fut') + '"><b>' + d + '</b>' + (pay ? '<em>★ ' + t('payout') + '</em>' : '') + '<small>' + (x && x.g ? Math.round(x.g * SHARE) + '€' : x ? '–' : '') + '</small></span>';
+      var x = mm.days[d - 1], pay = d === pd, today = isCur && d === td, dots = '';
+      if (x) for (var k = 0; k < Math.min(x.n, 6); k++) dots += '<i></i>';
+      cells += '<span class="cday' + (pay ? ' pay' : '') + (today ? ' today' : '') + (x ? '' : ' fut') + '"><b>' + d + '</b>' + (pay ? '<em>★ ' + t('payout') + '</em>' : '') + '<small>' + (x && x.g ? Math.round(x.g * SHARE) + '€' : x ? '–' : '') + '</small><span class="cdots">' + dots + '</span></span>';
     }
     var status = fut ? t('scheduled') : isCur ? (td === pd ? t('sendToday') : td < pd ? t('scheduled') : t('paid')) : t('paid');
-    var hist = ''; for (var k = 1; k <= 4; k++) { var hm = tm - k, hy = ty; while (hm < 0) { hm += 12; hy--; } var pp = period(hy, hm); hist += '<div class="review-row"><span>' + dshort(new Date(hy, hm, payDay(hy, hm))) + ' ' + hy + '</span><b>' + money(pp.net) + ' <span class="st-pill on">' + t('paid') + '</span></b></div>'; }
-    return '<div class="cal-h"><button class="icon-btn" data-x="ocal" data-v="-1" aria-label="Previous">' + ic('back') + '</button><b>' + monthLbl(y, m) + '</b><button class="icon-btn" data-x="ocal" data-v="1" aria-label="Next">' + ic('chev') + '</button></div>' +
-      '<div class="ocal">' + cells + '</div><p class="small muted" style="margin:8px 0 14px">' + t('payRule') + '</p>' +
-      '<div class="pay-box"><div class="box-h"><span class="pc-star">★</span><b style="flex:1">' + t('payout') + ' · ' + dshort(new Date(y, m, pd)) + '</b><span class="st-pill ' + (status === t('paid') ? 'on' : 'warn') + '">' + status + '</span></div>' +
-      '<b class="pay-big">' + money(per.net) + '</b>' +
+    var hist = ''; for (var k2 = 1; k2 <= 6; k2++) { var hm = tm - k2, hy = ty; while (hm < 0) { hm += 12; hy--; } var pp = period(hy, hm, list); hist += '<div class="orow"><span class="grow"><b style="text-transform:capitalize">' + monthLbl(hy, hm) + '</b><small>' + dshort(new Date(hy, hm, payDay(hy, hm))) + ' · ' + pp.n + ' ' + t('bkShort') + '</small></span><b>' + money(pp.net) + '</b><span class="opill p-on">' + t('paid') + '</span></div>'; }
+    return '<div class="cal-h"><button class="icon-btn" data-x="ocal" data-v="-1" aria-label="Previous">' + ic('back') + '</button><button class="link" data-x="ocal" data-v="0"><b>' + monthLbl(y, m) + '</b></button><button class="icon-btn" data-x="ocal" data-v="1" aria-label="Next">' + ic('chev') + '</button></div>' +
+      '<div class="ocal">' + cells + '</div>' +
+      '<div class="olegend"><span><i class="lg-e"></i>' + t('lgEarn') + '</span><span><i class="lg-d"></i>' + t('lgBk') + '</span><span><i class="lg-t"></i>' + t('today') + '</span><span><i class="lg-p"></i>★ ' + t('payout') + '</span></div>' +
+      '<p class="small muted" style="margin:8px 0 14px">' + t('payRule') + '</p>' +
+      '<div class="pay-box"><div class="box-h"><span class="pc-star">★</span><b style="flex:1">' + t('payout') + ' · ' + dshort(new Date(y, m, pd)) + '</b><span class="opill ' + (status === t('paid') ? 'p-on' : 'p-warn') + '">' + status + '</span></div>' +
+      '<b class="pay-big">' + money(per.net) + '</b><p class="small muted" style="margin:-4px 0 6px">' + per.n + ' ' + t('bkShort') + '</p>' +
       '<div class="review-row"><span>' + t('period') + '</span><b>' + dshort(per.start) + ' – ' + dshort(per.end) + '</b></div><div class="review-row"><span>' + t('grossL') + '</span><b>' + money(per.g) + '</b></div>' +
-      '<div class="review-row"><span>' + t('feeL') + '</span><b>− ' + money(per.g - per.net) + '</b></div><div class="review-row"><span>' + t('bank') + '</span><b>PL •• 4471</b></div></div>' +
-      '<h3 class="sec-t">' + t('payHist') + '</h3>' + hist;
+      '<div class="review-row"><span>' + t('feeL') + '</span><b>− ' + money(per.g - per.net) + '</b></div><div class="review-row"><span><b>' + t('netL') + '</b></span><b class="up">' + money(per.net) + '</b></div><div class="review-row"><span>' + t('bank') + '</span><b>' + info.iban + '</b></div></div>' +
+      '<h3 class="sec-t">' + t('payHist') + '</h3><div class="olist">' + hist + '</div>';
   }
   function revHtml(r) {
     var rep = S.replies[r.id];
@@ -780,55 +878,62 @@
       (rep ? '<div class="orep"><b>' + t('yourReply') + '</b>' + esc(rep) + '</div>' : OWN.replying === r.id ? '<form class="orep-f" data-rid="' + r.id + '"><textarea class="input" rows="3" placeholder="' + t('replyPh') + '"></textarea><div class="row-btns"><button type="button" class="btn btn-outline btn-sm" data-x="ocancel">' + t('cancel') + '</button><button class="btn btn-primary btn-sm" type="submit">' + t('sendReply') + '</button></div></form>' : '<button class="link" data-x="oreply" data-v="' + r.id + '">' + ic('chat') + ' ' + t('reply') + '</button>') + '</div>';
   }
   function ownRatings() {
-    var all = allRev(), list = all.filter(function (r) { return !OWN.stars || r.st === OWN.stars; }), avg = avgSt(all);
-    var dist = [5, 4, 3, 2, 1].map(function (n) { var c = all.filter(function (r) { return r.st === n; }).length; return '<div class="drow5"><span>' + n + '★</span><span class="dbar"><i style="width:' + (all.length ? c / all.length * 100 : 0) + '%"></i></span><span>' + c + '</span></div>'; }).join('');
-    return '<div class="rate-top"><div class="rate-avg"><b>' + num(avg, 1) + '</b>' + starRow(avg) + '<small>' + all.length + ' ' + t('reviews') + '</small></div><div class="grow">' + dist + '</div></div>' +
-      '<div class="chips" style="padding:0;margin:14px 0 6px;flex-wrap:wrap">' + [0, 5, 4, 3, 2, 1].map(function (n) { return '<button class="chip' + (OWN.stars === n ? ' on' : '') + '" data-x="ostars" data-v="' + n + '">' + (n ? n + ' ★' : t('allR')) + '</button>'; }).join('') + '</div>' +
+    var spaces = ownerSpaces(), all = allRev(), base = all.filter(function (r) { return !OWN.space || r.h.id === OWN.space; }), list = base.filter(function (r) { return !OWN.stars || r.st === OWN.stars; }), avg = avgSt(base);
+    var dist = [5, 4, 3, 2, 1].map(function (n) { var c = base.filter(function (r) { return r.st === n; }).length; return '<div class="drow5"><span>' + n + '★</span><span class="dbar"><i style="width:' + (base.length ? c / base.length * 100 : 0) + '%"></i></span><span>' + c + '</span></div>'; }).join('');
+    var per = spaces.map(function (h) { var rv = reviews(h); return '<div class="orow"><span class="grow"><b>' + esc(spaceName(h)) + '</b><small>' + rv.length + ' ' + t('reviews') + '</small></span>' + starRow(avgSt(rv)) + '<b>' + num(avgSt(rv), 1) + '</b></div>'; }).join('');
+    return '<div class="rate-top"><div class="rate-avg"><b>' + num(avg, 1) + '</b>' + starRow(avg) + '<small>' + base.length + ' ' + t('reviews') + '</small></div><div class="grow">' + dist + '</div></div>' +
+      '<h3 class="sec-t">' + t('perSpace') + '</h3><div class="olist">' + per + '</div>' +
+      '<select class="input" id="ors" style="margin:14px 0 8px"><option value="">' + t('allSpaces') + '</option>' + spaces.map(function (h) { return '<option value="' + h.id + '"' + (OWN.space === h.id ? ' selected' : '') + '>' + esc(spaceName(h)) + '</option>'; }).join('') + '</select>' +
+      '<div class="chips" style="padding:0;margin:0 0 6px;flex-wrap:wrap">' + [0, 5, 4, 3, 2, 1].map(function (n) { return '<button class="chip' + (OWN.stars === n ? ' on' : '') + '" data-x="ostars" data-v="' + n + '">' + (n ? n + ' ★' : t('allR')) + '</button>'; }).join('') + '</div>' +
       (list.length ? list.map(revHtml).join('') : '<p class="muted">' + t('noRev') + '</p>');
   }
   function ownOps() {
-    var y = TODAY.getFullYear(), m = TODAY.getMonth(), d = TODAY.getDate(), out = '', ideas = [];
-    S.spaces.forEach(function (h) {
+    var list = ownerSpaces(), y = TODAY.getFullYear(), m = TODAY.getMonth(), d = TODAY.getDate(), out = '', ideas = [];
+    list.forEach(function (h) {
       var c = cityOf(h.city), pub = D.publicEur(c, h.loc), sug = D.suggest(c, h.loc), avg = Math.round(sug * 1.08 * 10) / 10, p = h.prices[0];
       var dl = p / avg - 1, pos = dl < -.1 ? 'low' : dl > .1 ? 'high' : 'ok', s = sum([h], y, m, 1, d), full = s.h / d * daysIn(y, m);
-      var impact = (full * (1 - 1.2 * (sug / p - 1)) * sug - full * p) * SHARE;
-      out += '<div class="dash-card"><div class="box-h"><b style="flex:1">' + esc(spaceName(h)) + '</b><span class="pr-d ' + pos + '">' + t(pos === 'low' ? 'below' : pos === 'high' ? 'above' : 'around') + '</span></div><p class="small muted" style="margin:-4px 0 8px">' + esc(cityName(h.city)) + ' · ' + t('loc' + h.loc) + '</p>' +
+      var impact = (full * (1 - 1.2 * (sug / p - 1)) * sug - full * p) * SHARE, k = schedKey(h);
+      out += '<div class="dash-card"><div class="box-h"><b style="flex:1">' + esc(spaceName(h)) + '</b><span class="pr-d ' + pos + '">' + t(pos === 'low' ? 'below' : pos === 'high' ? 'above' : 'around') + (pos === 'ok' ? '' : ' ' + (dl > 0 ? '+' : '−') + Math.round(Math.abs(dl) * 100) + '%') + '</span></div><p class="small muted" style="margin:-4px 0 8px">' + esc(cityName(h.city)) + ' · ' + t('loc' + h.loc) + '</p>' +
         '<div class="ops4"><div><small>' + t('pubP') + '</small><b>' + money(pub) + '</b></div><div><small>' + t('sugP') + '</small><b>' + money(sug) + '</b></div><div><small>' + t('areaA') + '</small><b>' + money(avg) + '</b></div><div><small>' + t('yourP') + '</small><b>' + money(p) + '</b></div></div>' +
-        (Math.abs(p - sug) > .049 ? '<div class="ops-f"><span class="' + (impact >= 0 ? 'up' : 'down') + '">' + (impact >= 0 ? '+' : '−') + money(Math.abs(impact), 0) + ' ' + t('perMo') + '*</span><button class="btn btn-outline btn-sm" data-x="useSug" data-v="' + h.id + '">' + t('useSug') + '</button></div>' : '') + '</div>';
-      var wkOnly = h.sched.slice(0, 5).every(function (x) { return x === 1; });
-      if (h.sharing && wkOnly) ideas.push({ k: 'idEve', g: 22 * 6 * .12 * (h.demand || .7) * h.prices[1] * SHARE, s: h });
-      if (h.sharing && h.sched[5] === 0) ideas.push({ k: 'idWe', g: 8.7 * 10 * .14 * (h.demand || .7) * h.prices[2] * SHARE, s: h });
+        (Math.abs(p - sug) > .049 ? '<div class="ops-f"><span class="' + (impact >= 0 ? 'up' : 'down') + '">' + (impact >= 0 ? '+' : '−') + money(Math.abs(impact), 0) + ' ' + t('perMo') + '*</span><button class="btn btn-outline btn-sm" data-x="useSug" data-v="' + h.id + '">' + t('useSug') + ' ' + money(sug) + '</button></div>' : '') + '</div>';
+      if (h.sharing && k === 'wk') ideas.push({ k: 'idEve', g: 22 * 4 * .12 * (h.demand || .7) * p * .7 * SHARE, s: h });
+      if (h.sharing && k !== 'all') ideas.push({ k: 'idWe', g: 8.7 * 10 * .4 * .35 * (h.demand || .7) * p * SHARE, s: h });
       if (h.tier === 'basic') ideas.push({ k: 'idGate', g: full * .15 * p * SHARE, s: h });
-      if (!h.sharing) ideas.push({ k: 'idOn', g: sum([Object.assign({}, h, { sched: [1, 1, 1, 1, 1, 0, 0] })], y, m - 1 < 0 ? 11 : m - 1).net || 20, s: h });
+      if (pos === 'high') ideas.push({ k: 'idPrice', g: Math.max(0, impact), s: h });
+      if (!h.sharing) ideas.push({ k: 'idOn', g: full * p * SHARE || 15, s: h });
     });
-    ideas = ideas.filter(function (x) { return x.g >= 1; }).sort(function (a, b) { return b.g - a.g; }).slice(0, 4);
-    var cities = {}; S.spaces.forEach(function (h) { cities[h.city] = 1; });
-    var mx = D.list.filter(function (c) { return cities[c.id] || c.st < 3; }).sort(function (a, b) { return (cities[b.id] ? 1 : 0) - (cities[a.id] ? 1 : 0) || a.st - b.st || (S.lang === 'pl' ? a.pl : a.en).localeCompare(S.lang === 'pl' ? b.pl : b.en); });
-    return '<h3 class="sec-t" style="margin-top:4px">' + t('ideas') + '</h3>' + (ideas.length ? ideas.map(function (x) { return '<div class="idea">' + ic('bolt') + '<span class="grow"><b>' + t(x.k) + '</b><small>' + esc(spaceName(x.s)) + ' · ' + esc(cityName(x.s.city)) + '</small></span><b class="up">+' + money(x.g, 0) + '</b></div>'; }).join('') : '<p class="muted small">' + t('noIdeas') + '</p>') +
-      '<h3 class="sec-t">' + t('yourVsMkt') + '</h3>' + out +
-      '<h3 class="sec-t">' + t('mxT') + '</h3><div class="mxl">' + mx.map(function (c) { return '<div class="mxr' + (cities[c.id] ? ' mine' : '') + '"><span class="grow"><b>' + esc(S.lang === 'pl' ? c.pl : c.en) + '</b><small>' + t('stage') + ' ' + c.st + ' · ' + t('pubP') + ' ' + money(D.publicEur(c, 'c')) + '</small></span><b>' + money(D.suggest(c, 'c')) + '</b></div>'; }).join('') + '</div>' +
-      '<p class="small muted" style="margin-top:8px">' + t('opsNote') + '</p>';
+    ideas = ideas.filter(function (x) { return x.g >= 1; }).sort(function (a, b) { return b.g - a.g; }).slice(0, 5);
+    var mine = {}; list.forEach(function (h) { mine[h.city] = 1; });
+    var nm = function (c) { return S.lang === 'pl' ? c.pl : c.en; };
+    var ccs = Object.keys(D.countries).sort(function (a, b) { return D.countries[a][S.lang === 'pl' ? 1 : 0].localeCompare(D.countries[b][S.lang === 'pl' ? 1 : 0]); });
+    var mx = D.list.filter(function (c) { return !OWN.mxc || c.cc === OWN.mxc; }).sort(function (a, b) { return (mine[b.id] ? 1 : 0) - (mine[a.id] ? 1 : 0) || a.st - b.st || nm(a).localeCompare(nm(b)); });
+    return '<h3 class="sec-t" style="margin-top:4px">' + t('yourVsMkt') + '</h3>' + out +
+      '<h3 class="sec-t">' + t('ideas') + '</h3>' + (ideas.length ? ideas.map(function (x) { return '<div class="idea">' + ic('bolt') + '<span class="grow"><b>' + t(x.k) + '</b><small>' + esc(spaceName(x.s)) + ' · ' + esc(cityName(x.s.city)) + '</small></span><b class="up">+' + money(x.g, 0) + '</b></div>'; }).join('') : '<p class="muted small">' + t('noIdeas') + '</p>') +
+      '<h3 class="sec-t">' + t('mxT') + '</h3><select class="input" id="omx" style="margin-bottom:8px"><option value="">' + t('allCountries') + '</option>' + ccs.map(function (cc) { return '<option value="' + cc + '"' + (OWN.mxc === cc ? ' selected' : '') + '>' + D.countries[cc][S.lang === 'pl' ? 1 : 0] + '</option>'; }).join('') + '</select>' +
+      '<div class="mxl"><div class="mxr mxh"><span class="grow">' + t('city') + '</span><span>' + t('pubP') + '</span><span>' + t('sugP') + '</span></div>' + mx.map(function (c) { var h = D.hours(c, 'c', ['wk']), e = D.earn(c, 'c', ['wk'], null, h); return '<div class="mxr' + (mine[c.id] ? ' mine' : '') + '"><span class="grow"><b>' + esc(nm(c)) + '</b><small>' + t('stage') + ' ' + c.st + ' · ≈ ' + money(e.net, 0) + ' ' + t('perMo') + '*</small></span><span>' + money(D.publicEur(c, 'c')) + '</span><b>' + money(D.suggest(c, 'c')) + '</b></div>'; }).join('') + '</div>' +
+      '<p class="small muted" style="margin-top:8px">' + t('opsNote') + '</p><a class="btn btn-outline" href="#/host/start" style="margin-top:12px">' + ic('tag') + t('simLink') + '</a>';
   }
 
   function spaceDetail(id) {
-    var h = ownSpace(id), sp = asSpot(h, 0), y = TODAY.getFullYear(), m = TODAY.getMonth(), d = TODAY.getDate(), s = sum([h], y, m, 1, d), rv = reviews(h);
-    var tierName = t({ basic: 'tBasic', connect: 'tConnect', pro: 'tPro' }[h.tier]);
+    var h = findSpace(id), sp = asSpot(h, 0), y = TODAY.getFullYear(), m = TODAY.getMonth(), d = TODAY.getDate(), s = sum([h], y, m, 1, d), rv = reviews(h);
+    var tierName = t({ basic: 'tBasic', connect: 'tConnect', pro: 'tPro' }[h.tier]), own = !h.demo;
     var dev = h.tier === 'basic' ? '' : (h.paired ? '<p class="dev-status"><i></i>' + t('devOnline') + '</p>' : '<p class="dev-status off"><i></i>' + t('devPair') + '</p><a class="btn btn-primary btn-sm" href="#/host/device/' + h.id + '" style="margin-top:10px">' + ic('qr') + t('pairDev') + '</a>');
-    var recent = []; for (var k = d; k >= 1 && recent.length < 3; k--) { var x = dayData(h, y, m, k); if (x && x.n) recent.push({ d: k, x: x }); }
+    var recent = []; for (var k = d; k >= 1 && recent.length < 4; k--) { var x = dayData(h, y, m, k); if (x && x.n) recent.push({ d: k, x: x }); }
     var plates = ['RZ 4K21', 'KR 123AB', 'WA 77TP', 'RZE 5512', 'KR 9ME01'];
-    return '<section class="screen fade-in"><div class="topbar"><a class="icon-btn" href="#/host">' + ic('back') + '</a><h1>' + esc(spaceName(h)) + '</h1><button class="icon-btn" data-x="editSpace" data-v="' + h.id + '" data-step="1" aria-label="' + t('edit') + '">' + ic('gear') + '</button></div><div class="pad" style="padding-top:4px">' +
-      '<div class="spot-row" style="margin-bottom:14px"><span class="thumb">' + thumb(sp, 'sd') + '</span><span class="sr-info"><b>' + esc(spaceName(h)) + '</b><span class="meta">' + esc(sp.addr) + '</span>' + accBadge(h.tier) + '</span></div>' +
+    var edit = function (step) { return own ? '<button class="link" data-x="editSpace" data-v="' + h.id + '" data-step="' + step + '">' + t('edit') + '</button>' : ''; };
+    return '<section class="screen fade-in"><div class="topbar"><a class="icon-btn" href="#/host">' + ic('back') + '</a><h1>' + esc(spaceName(h)) + '</h1>' + (own ? '<button class="icon-btn" data-x="editSpace" data-v="' + h.id + '" data-step="1" aria-label="' + t('edit') + '">' + ic('gear') + '</button>' : '<span class="demo-badge">' + t('demo') + '</span>') + '</div><div class="pad" style="padding-top:4px">' +
+      '<div class="spot-row" style="margin-bottom:14px"><span class="thumb">' + thumb(sp, 'sd') + '</span><span class="sr-info"><b>' + esc(spaceName(h)) + '</b><span class="meta">' + esc(h.address + ', ' + cityName(h.city)) + '</span>' + accBadge(h.tier) + '</span></div>' +
       '<button class="switch-card' + (h.sharing ? ' on' : '') + '" data-x="share" data-v="' + h.id + '"><span class="ic-round">' + ic('power') + '</span><span style="flex:1"><b>' + t(h.sharing ? 'sharing' : 'notSharing') + '</b><small>' + t(h.sharing ? 'sharingD' : 'notSharingD') + '</small></span><span class="tgl"></span></button>' +
-      (h.sharing ? '<a class="link" href="#/explore" data-x="seeMap" data-v="' + h.city + '" style="display:inline-flex;gap:6px;align-items:center;margin:10px 4px 0">' + ic('map') + t('viewOnMap') + '</a>' : '') +
-      '<div class="dash-earn" style="margin:16px 0 12px"><div class="green"><small>' + t('monthE') + '</small><b>' + money(s.net) + '</b></div><div><small>' + t('timesUsed') + '</small><b>' + s.n + '× · ' + num(avgSt(rv), 1) + '★</b></div></div>' +
-      '<div class="dash-card"><div class="box-h"><span class="ic-round">' + ic(ACC[h.tier].ic) + '</span><b style="flex:1">' + t('accMethod') + '</b><button class="link" data-x="editSpace" data-v="' + h.id + '" data-step="2">' + t('edit') + '</button></div><p style="font-weight:600">' + tierName + '</p>' + dev + '</div>' +
-      '<div class="dash-card"><div class="box-h"><span class="ic-round">' + ic('tag') + '</span><b style="flex:1">' + t('price') + '</b><button class="link" data-x="editSpace" data-v="' + h.id + '" data-step="4">' + t('edit') + '</button></div><p>' + money(h.prices[0]) + ' ' + t('perHour') + ' · ' + t('r1') + '</p><p class="small muted">' + money(h.prices[1]) + ' · ' + t('r2') + ' — ' + money(h.prices[2]) + ' · ' + t('r3') + '</p></div>' +
-      '<div class="dash-card"><b style="font-family:var(--fh)">' + t('bkYour') + '</b>' + (recent.length ? recent.map(function (r, i) { return '<div class="bk-item" style="margin-top:8px"><span class="plate">' + plates[(i + r.d) % plates.length] + '</span><span style="flex:1">' + dshort(new Date(y, m, r.d)) + ' · ' + r.x.n + '× · ' + num(r.x.h, 1) + ' h</span><b>+' + money(r.x.g * SHARE) + '</b></div>'; }).join('') : '<p class="small muted" style="margin-top:6px">' + t('noBkYet') + '</p>') + '</div>' +
-      '<button class="btn btn-ghost" data-x="delSpace" data-v="' + h.id + '" style="color:var(--red)">' + t('delBtn') + '</button>' +
+      '<div class="ostats" style="margin:14px 0 12px"><div><small>' + t('earnS') + '</small><b>' + money(s.net, 0) + '</b></div><div><small>' + t('bookingsN') + '</small><b>' + s.n + '</b></div><div><small>' + t('hoursS') + '</small><b>' + num(s.h) + '</b></div><div><small>' + t('rating') + '</small><b>' + num(avgSt(rv), 1) + '★</b></div></div>' +
+      '<div class="dash-card"><div class="box-h"><span class="ic-round">' + ic(ACC[h.tier].ic) + '</span><b style="flex:1">' + t('accMethod') + '</b>' + edit(2) + '</div><p style="font-weight:600">' + tierName + '</p>' + dev + '</div>' +
+      '<div class="dash-card"><div class="box-h"><span class="ic-round">' + ic('tag') + '</span><b style="flex:1">' + t('price') + '</b>' + edit(4) + '</div><p>' + money(h.prices[0]) + ' ' + t('perHour') + ' · ' + schedLbl(h) + '</p></div>' +
+      '<div class="dash-card"><b style="font-family:var(--fh)">' + t('bkYour') + '</b>' + (recent.length ? recent.map(function (r, i) { return '<div class="bk-item" style="margin-top:8px"><span class="plate">' + plates[(i * 2 + r.d) % plates.length] + '</span><span style="flex:1">' + dshort(new Date(y, m, r.d)) + ' · ' + r.x.n + '× · ' + num(r.x.h, 1) + ' h</span><b>+' + money(r.x.g * SHARE) + '</b></div>'; }).join('') : '<p class="small muted" style="margin-top:6px">' + t('noBkYet') + '</p>') + '</div>' +
+      '<h3 class="sec-t">' + t('latestRev') + '</h3>' + rv.sort(function (a, b) { return b.date - a.date; }).slice(0, 3).map(revHtml).join('') +
+      (own ? '<button class="btn btn-ghost" data-x="delSpace" data-v="' + h.id + '" style="color:var(--red)">' + t('delBtn') + '</button>' : '') +
       '</div></section>' + tabbar('host');
   }
   function devicePair(id) {
-    var h = ownSpace(id) || S.spaces[0] || {}, pro = h.tier === 'pro';
+    var h = findSpace(id) || S.spaces[0] || {}, pro = h.tier === 'pro';
     return '<section class="screen fade-in"><div class="topbar"><a class="icon-btn" href="' + (h.id ? '#/host/space/' + h.id : '#/host') + '">' + ic('back') + '</a><h1>' + t('pairT') + '</h1></div><div class="pad">' +
       '<div class="dev-hero">' + deviceArt() + '</div>' +
       '<div class="hl-list">' +
@@ -897,12 +1002,12 @@
 
   /* ---------- Profile & earnings ---------- */
   VIEWS.profile = function () {
-    var u = S.user || { name: 'Ho-Park' }, isHost = S.spaces.length > 0;
+    var u = S.user || { name: 'Ho-Park' }, isHost = true, OS = ownerSpaces();
     var row = function (icn, k, extra, act, href) { return (href ? '<a class="mrow" href="' + href + '"' + (href.indexOf('http') === 0 || href.indexOf(SITE) === 0 ? ' target="_top"' : '') + '>' : '<button class="mrow" data-x="' + act + '">') + ic(icn) + '<span class="grow">' + t(k) + '</span>' + (extra || '') + ic('chev') + (href ? '</a>' : '</button>'); };
     var earn = '';
     if (isHost) {
-      var y = TODAY.getFullYear(), m = TODAY.getMonth(), d = TODAY.getDate(), cur = sum(S.spaces, y, m, 1, d), wk = [0, 0, 0, 0];
-      for (var k = 0; k < 28; k++) { var dt = new Date(TODAY); dt.setDate(dt.getDate() - k); S.spaces.forEach(function (h) { var x = dayData(h, dt.getFullYear(), dt.getMonth(), dt.getDate()); if (x) wk[3 - Math.floor(k / 7)] += x.g * SHARE; }); }
+      var y = TODAY.getFullYear(), m = TODAY.getMonth(), d = TODAY.getDate(), cur = sum(OS, y, m, 1, d), wk = [0, 0, 0, 0];
+      for (var k = 0; k < 28; k++) { var dt = new Date(TODAY); dt.setDate(dt.getDate() - k); OS.forEach(function (h) { var x = dayData(h, dt.getFullYear(), dt.getMonth(), dt.getDate()); if (x) wk[3 - Math.floor(k / 7)] += x.g * SHARE; }); }
       var max = Math.max.apply(null, wk.concat([1]));
       earn = '<div class="earn-card"><div class="earn-top"><div><small>' + t('earnedM') + '</small><b>' + money(cur.net) + '</b></div><span class="host-badge" style="background:var(--soft);color:var(--ink2)">' + t('last4w') + '</span></div>' +
         '<div class="bars">' + wk.map(function (v, i) { return '<div><i style="height:' + Math.max(6, v / max * 100) + '%"></i><span>' + t('week') + (i + 1) + '</span></div>'; }).join('') + '</div>' +
@@ -913,12 +1018,14 @@
       '<div class="prof-head"><span class="avatar lg">' + initials(u.name) + '</span><div><h1>' + esc(u.name) + '</h1>' + (isHost ? '<span class="host-badge">' + ic('share') + t('host') + '</span>' : '') + '<p class="small muted">' + esc(cityName(S.city)) + '</p></div></div>' +
       '<div class="stats3"><div><b>' + S.history.length + '</b><small>' + t('bookingsN') + '</small></div><div><b>' + (revs.length ? num(avgSt(revs), 1) : '–') + '</b><small>' + t('rating') + '</small></div><div><span class="ok">' + (S.verified ? ic('check') : ic('shield')) + '</span><small>' + t(S.verified ? 'verified' : 'notVerified') + '</small></div></div>' +
       earn +
-      '<div class="menu">' + row('share', 'mySpaces', '<em>' + S.spaces.length + '</em>', null, '#/host') + row('bank', 'payout', '<em>•• 4471</em>', 'payout') +
-      row('doc', 'docs', '<em class="' + (S.verified ? 'ok' : '') + '">' + t(S.verified ? 'verified' : 'notVerified') + '</em>', 'verify') + row('help', 'help', '', null, SITE + 'index.html#contact') + row('gear', 'settings', '', null, '#/settings') + '</div></section>' + tabbar('profile');
+      '<div class="menu">' + row('share', 'mySpaces', '<em>' + OS.length + '</em>', null, '#/host') + row('bank', 'payout', '<em>•• 4471</em>', 'payout') +
+      row('doc', 'docs', '<em class="' + (S.verified ? 'ok' : '') + '">' + t(S.verified ? 'verified' : 'notVerified') + '</em>', 'verify') + row('help', 'help', '', null, SITE + 'index.html#contact') + row('gear', 'theme', '<em>' + t('th' + THEME[0].toUpperCase() + THEME.slice(1)) + '</em>', null, '#/settings') + row('gear', 'settings', '', null, '#/settings') + '</div></section>' + tabbar('profile');
   };
   VIEWS.settings = function () {
     return '<section class="screen fade-in"><div class="topbar"><a class="icon-btn" href="#/profile">' + ic('back') + '</a><h1>' + t('settings') + '</h1></div><div class="pad">' +
       '<h3 class="sec-t" style="margin-top:4px">' + t('language') + '</h3><div class="seg"><button class="' + (S.lang === 'en' ? 'on' : '') + '" data-x="lang" data-v="en">English</button><button class="' + (S.lang === 'pl' ? 'on' : '') + '" data-x="lang" data-v="pl">Polski</button></div>' +
+      '<h3 class="sec-t">' + t('theme') + '</h3><div class="themes">' + Object.keys(THEMES).map(function (k) { var n = k[0].toUpperCase() + k.slice(1), w = THEMES[k].sw;
+        return '<button class="th-card' + (THEME === k ? ' on' : '') + '" data-x="theme" data-v="' + k + '" aria-pressed="' + (THEME === k) + '"><span class="th-prev" style="background:' + w[0] + '"><i style="background:' + w[1] + '"></i><i style="background:' + w[2] + '"></i><em style="background:' + w[1] + '"></em></span><b>' + t('th' + n) + '</b><small>' + t('th' + n + 'D') + '</small>' + (THEME === k ? '<span class="th-ok">' + ic('check') + '</span>' : '') + '</button>'; }).join('') + '</div><p class="small muted" style="margin:6px 2px 0">' + t('themeD') + '</p>' +
       '<div class="menu" style="margin:16px 0">' +
       '<button class="mrow' + (S.notif ? ' on' : '') + '" data-x="notif">' + ic('bell') + '<span class="grow">' + t('notif') + '</span><span class="tgl' + (S.notif ? ' on' : '') + '"></span></button>' +
       '<button class="mrow" data-x="install">' + ic('sharei') + '<span class="grow">' + t('install') + '</span>' + ic('chev') + '</button>' +
@@ -1004,16 +1111,18 @@
       var d = draft(), id = d.editing || ('m' + Date.now().toString(36)), old = ownSpace(id);
       var sp = { id: id, type: d.type, address: d.address, bay: d.bay, photo: d.photo, tier: d.tier, instr: d.instr, sched: d.sched, prices: d.prices, city: d.city, loc: d.loc, sharing: old ? old.sharing : true, paired: old ? old.paired : false, demand: old ? old.demand : .7 };
       if (old) S.spaces[S.spaces.indexOf(old)] = sp; else S.spaces.push(sp);
-      S.draft = null; S.city = sp.city; makeSpots(S.city); save(); toast(t(old ? 'saved' : 'published'));
+      S.draft = null; S.city = sp.city; S.ownAcct = 'mine'; OWN.tab = 'ov'; makeSpots(S.city); save(); toast(t(old ? 'saved' : 'published'));
       go(sp.tier !== 'basic' && !sp.paired ? '#/host/device/' + id : '#/host/space/' + id);
     },
-    share: function (v) { var h = ownSpace(v); h.sharing = !h.sharing; save(); toast(t(h.sharing ? 'sharing' : 'notSharing')); render(); },
+    share: function (v) { var h = ownSpace(v); if (h) h.sharing = !h.sharing; else { h = findSpace(v); S.demoOv = S.demoOv || {}; S.demoOv[v] = S.demoOv[v] || {}; S.demoOv[v].on = !h.sharing; h.sharing = !h.sharing; } save(); toast(t(h.sharing ? 'sharing' : 'notSharing')); render(); },
+    oacct: function (v) { S.ownAcct = v; OWN.space = ''; OWN.q = ''; save(); render(); },
+    ospf: function (v) { OWN.spf = v; render(); },
     dCity: function () { var d = draft(); citySheet(d.city, function (id) { d.city = id; d.prices = tri(D.suggest(cityOf(id), d.loc)); save(); render(); }); },
     dLoc: function (v) { var d = draft(); d.loc = v; d.prices = tri(D.suggest(cityOf(d.city), v)); save(); render(); },
     wizClose: function () { S.draft = null; save(); },
     editSpace: function (v, el) { var h = ownSpace(v); S.draft = JSON.parse(JSON.stringify(h)); S.draft.editing = v; S.draft.now = h.sharing; save(); go('#/host/new/' + (el.dataset.step || 1)); },
-    delSpace: function (v) { confirmSheet(t('delT'), t('delD'), t('delBtn'), function () { S.spaces = S.spaces.filter(function (x) { return x.id !== v; }); save(); toast(t('deleted')); go('#/host'); }, true); },
-    demoOwner: function () { var have = {}; S.spaces.forEach(function (x) { have[x.id] = 1; }); demoSpaces().forEach(function (x) { if (!have[x.id]) S.spaces.push(x); }); S.verified = true; save(); toast(t('demoLoaded')); go('#/host'); },
+    delSpace: function (v) { confirmSheet(t('delT'), t('delD'), t('delBtn'), function () { S.spaces = S.spaces.filter(function (x) { return x.id !== v; }); if (!S.spaces.length) S.ownAcct = 'private'; save(); toast(t('deleted')); go('#/host'); }, true); },
+    demoOwner: function () { S.ownAcct = 'private'; OWN.tab = 'ov'; save(); go('#/host'); },
     simCity: function () { citySheet(SIM.city, function (id) { SIM.city = id; render(); }); },
     simLoc: function (v) { SIM.loc = v; render(); },
     seeMap: function (v) { S.city = v; makeSpots(v); save(); },
@@ -1023,7 +1132,7 @@
     ostars: function (v) { OWN.stars = +v; render(); },
     oreply: function (v) { OWN.replying = v; render(); },
     ocancel: function () { OWN.replying = null; render(); },
-    useSug: function (v) { var h = ownSpace(v), p = D.suggest(cityOf(h.city), h.loc); h.prices[0] = p; save(); toast(t('priceSet') + ' ' + money(p)); render(); },
+    useSug: function (v) { var h = findSpace(v), p = D.suggest(cityOf(h.city), h.loc), o = ownSpace(v); if (o) o.prices[0] = p; else { S.demoOv = S.demoOv || {}; S.demoOv[v] = S.demoOv[v] || {}; S.demoOv[v].price = p; } save(); toast(t('priceSet') + ' ' + money(p)); render(); },
     pairScan: function (v) {
       var pid = v || (S.spaces[0] && S.spaces[0].id), ph = ownSpace(pid);
       sheet('<h2>' + t('pair3') + '</h2><div class="scan-view"><div class="scan-qr">' + qrSvg('https://ho-park.com/gate/HP-RZ-0014') + '</div><span class="scan-frame"></span><span class="scan-line"></span></div><div id="pairRes"><div class="spinner"></div></div>', function (sh) {
@@ -1039,6 +1148,7 @@
         $('#vGo', sh).addEventListener('click', function () { sh.innerHTML = '<div class="grab"></div><div class="success"><div class="spinner"></div></div>'; setTimeout(function () { S.verified = true; save(); closeSheet(); toast(t('verifiedT')); render(); }, 1500); });
       });
     },
+    theme: function (v) { var dark0 = THEMES[THEME].bar !== 'default'; applyTheme(v, true); render(); toast(t('themeSet') + ' · ' + t('th' + v[0].toUpperCase() + v.slice(1))); if (standalone && dark0 !== (THEMES[v].bar !== 'default')) setTimeout(function () { toast(t('themeBar')); }, 2300); },
     lang: function (v) { S.lang = v; makeSpots(S.city); save(); document.documentElement.lang = v; deskTexts(); render(); },
     notif: function () { S.notif = !S.notif; save(); render(); },
     install: function () { sheet('<h2>' + t('install') + '</h2><p class="lead">' + t('installD') + '</p><button class="btn btn-primary" data-x="close">' + t('done') + '</button>'); },

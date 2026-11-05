@@ -40,8 +40,11 @@ Android: open the address in Chrome → menu ⋮ → **Install app** / **Add to 
 ## 3. Testing tips
 
 - Tap **Create account with email** — any details work (demo).
-- **Share** tab → *Load demo owner account (4 spaces)* fills the owner dashboard with example spaces
-  in Rzeszów, Kraków and Budapest. Or add your own space with **List my space**.
+- **Share** tab opens the Owner dashboard with two demo accounts — **Private · 2** and **Company · 7** —
+  showing the same figures as the website dashboard. Add your own space with **+** to get a **Mine** account.
+- **Profile → Colour theme** (or **Settings**): choose **Emerald & White**, **Black & Gold** or **Emerald Night**.
+  The choice is saved on the phone. After switching between a light and a dark theme, reopen the
+  home-screen app once so the iPhone status bar matches.
 - **Explore** → tap the city name at the top to switch between 57 EU cities.
 - **Profile → Settings → Reset demo data** starts from scratch.
 
@@ -59,7 +62,8 @@ Pages updates within a minute or two. On the phone, close and reopen the app twi
 3. **Settings → Pages** → Source: *Deploy from a branch*, Branch: *main*, */ (root)* → **Save**.
 4. Po 1–2 min adres: `https://TWOJA-NAZWA.github.io/ho-park-app/`.
 5. iPhone: otwórz adres w **Safari** → **Udostępnij** → **Do ekranu początkowego**.
-6. Aktualizacja: wgraj zmienione pliki ponownie; na telefonie zamknij i otwórz aplikację dwa razy.
+6. Motyw kolorów: **Profil → Motyw kolorów** — Szmaragd i biel, Czerń i złoto lub Szmaragdowa noc (po zmianie jasny↔ciemny uruchom aplikację ponownie).
+7. Aktualizacja: wgraj zmienione pliki ponownie; na telefonie zamknij i otwórz aplikację dwa razy.
 
 Demo — dane zapisują się tylko na danym telefonie; rezerwacje, płatności i zarobki są symulowane.
 Szacunki cen i zarobków nie są ofertą handlową.

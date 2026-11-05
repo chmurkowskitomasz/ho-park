@@ -1,6 +1,6 @@
 /* Ho-Park app — offline cache (app shell) */
-var CACHE = 'hp-app-1.1.0';
-var SHELL = ['./', 'index.html', 'app.css?v=1.1.0', 'app.js?v=1.1.0', 'qr.js?v=1.1.0', 'cities.js?v=1.1.0', 'manifest.webmanifest',
+var CACHE = 'hp-app-1.3.0';
+var SHELL = ['./', 'index.html', 'app.css?v=1.3.0', 'app.js?v=1.3.0', 'qr.js?v=1.3.0', 'cities.js?v=1.3.0', 'manifest.webmanifest',
   'icons/apple-touch-icon.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(SHELL); }).then(function () { return self.skipWaiting(); }));
